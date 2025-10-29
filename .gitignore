@@ -1,0 +1,5 @@
+.env
+__pycache__/
+*.pyc
+dataviz/data_for_viz.json
+Jenkinsfile

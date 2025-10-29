@@ -1,0 +1,70 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: tourism-db
+    restart: always
+    environment:
+      MYSQL_DATABASE: tourismdb
+      MYSQL_ROOT_PASSWORD: ""
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  etl:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: tourism-etl
+    restart: "no"
+    environment:
+      MYSQL_DATABASE: tourismdb
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ""
+      MYSQL_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ./scripts/run_etl.sh
+    networks:
+      - app-network
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: tourism-app
+    restart: always
+    environment:
+      MYSQL_DATABASE: tourismdb
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ""
+      MYSQL_HOST: db
+      PORT: 8000
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    command: python -m http.server 8000 --directory dataviz
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - app-network
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Visualisation Hébergements</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h2 { margin-top: 40px; }
+    canvas { max-width: 700px; margin: 20px auto; display: block; }
+  </style>
+</head>
+<body>
+  <h1>Statistiques Hébergements</h1>
+
+  <h2> Accessibilité Globale</h2>
+  <canvas id="globalChart"></canvas>
+
+  <h2> Nombre d'hébergements par code postal</h2>
+  <canvas id="cpChart"></canvas>
+
+  <h2> Top 5 communes accessibles</h2>
+  <canvas id="communesChart"></canvas>
+
+  <script>
+    fetch("data_for_viz.json")
+      .then(response => response.json())
+      .then(data => {
+       
+        const globalCtx = document.getElementById('globalChart').getContext('2d');
+        new Chart(globalCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['Accessibles', 'Non accessibles'],
+            datasets: [{
+              data: [data.global_accessibility, 100 - data.global_accessibility],
+              backgroundColor: ['#4CAF50', '#FF5722']
+            }]
+          }
+        });
+
+
+        const cpLabels = Object.keys(data.par_code_postal);
+        const cpValues = Object.values(data.par_code_postal).map(d => d.total);
+
+        const cpCtx = document.getElementById('cpChart').getContext('2d');
+        new Chart(cpCtx, {
+          type: 'bar',
+          data: {
+            labels: cpLabels,
+            datasets: [{
+              label: 'Nombre d’hébergements',
+              data: cpValues,
+              backgroundColor: '#2196F3'
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              x: { ticks: { autoSkip: true, maxRotation: 90, minRotation: 45 } },
+              y: { beginAtZero: true }
+            }
+          }
+        });
+
+
+        const communesLabels = data.top_5_communes.map(c => c[0]);
+        const communesValues = data.top_5_communes.map(c => c[1].proportion_accessible);
+
+        const communesCtx = document.getElementById('communesChart').getContext('2d');
+        new Chart(communesCtx, {
+          type: 'bar',
+          data: {
+            labels: communesLabels,
+            datasets: [{
+              label: '% Accessibilité',
+              data: communesValues,
+              backgroundColor: '#FF9800'
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true, max: 100 } }
+          }
+        });
+      });
+  </script>
+</body>
+</html>
