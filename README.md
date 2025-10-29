@@ -48,10 +48,6 @@ For this challenge, I **enhanced and containerized** it to fit a modern DevOps w
 │ └── main.tf
 └── README.md
 
-yaml
-Copier le code
-
----
 
 ## 🐳 Containerization
 
