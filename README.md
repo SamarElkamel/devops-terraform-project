@@ -65,3 +65,115 @@ Defines 3 services:
 Run everything with:
 ```bash
 docker compose -f docker/docker-compose.yml up --build
+```
+
+Then open `http://127.0.0.1:8000` to view the visualization.
+
+Stop the stack:
+```bash
+docker compose -f docker/docker-compose.yml down
+```
+
+Persistent data: the `db_data` volume keeps MySQL data between runs.
+
+---
+
+## 🚀 Quickstart
+
+1) Build and start services:
+```bash
+docker compose -f docker/docker-compose.yml up --build
+```
+
+2) Wait for the `etl` container to finish (it loads data and generates `dataviz/data_for_viz.json`).
+
+3) Open the app: `http://127.0.0.1:8000`.
+
+---
+
+## ⚙️ Configuration
+
+Environment variables (used by ETL and app):
+- `MYSQL_HOST` (default `db`)
+- `MYSQL_DATABASE` (default `tourismdb`)
+- `MYSQL_USER` (default `root`)
+- `MYSQL_PASSWORD` (default empty for local dev)
+- `PORT` (static server, default `8000`)
+
+You can override these in `docker/docker-compose.yml` or via `--env` flags.
+
+---
+
+## ✅ CI Pipeline (GitHub Actions)
+
+Workflow at `.github/workflows/ci.yml` runs on push/PR:
+- Lint with `ruff`
+- Format check with `black --check`
+- Tests with `pytest`
+- Docker build (root Dockerfile) and `docker compose build`
+
+Run the same locally:
+```bash
+pip install ruff black pytest
+ruff check .
+black --check .
+pytest -q
+docker build -t tourism-accessibility:local .
+docker compose -f docker/docker-compose.yml build
+```
+
+---
+
+## 🧪 Tests
+
+Minimal smoke test is provided:
+```bash
+docker compose -f docker/docker-compose.yml run --rm etl pytest -q
+```
+
+---
+
+## 🔍 Monitoring & Health
+
+- Compose healthchecks:
+  - `db`: `mysqladmin ping` ensures MySQL is up before ETL runs
+  - `app`: HTTP healthcheck on `http://localhost:8000`
+- Logs:
+  - `docker logs tourism-app` / `tourism-etl` / `tourism-db`
+  - In CI, inspect job logs for lint/test/build results
+- Simple uptime idea:
+  - Periodically hit `http://127.0.0.1:8000` (external monitor or cron) when deployed
+
+---
+
+## ☁️ (Bonus) Terraform – Static Hosting on S3
+
+An example IaC is provided in `terraform/` to create a public S3 bucket configured for static website hosting (to host `dataviz/`).
+
+Prerequisites: AWS credentials configured (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`).
+
+Commands:
+```bash
+cd terraform
+terraform init
+terraform plan -var "bucket_name=<globally-unique-bucket-name>"
+# terraform apply # to create resources
+```
+
+Upload artifacts (example):
+```bash
+aws s3 cp ../dataviz/index.html s3://<bucket>/index.html --acl public-read
+aws s3 cp ../dataviz/data_for_viz.json s3://<bucket>/data_for_viz.json --acl public-read
+```
+
+Outputs:
+- `website_endpoint` – the S3 website URL
+
+---
+
+## 🧰 Troubleshooting
+
+- Port 8000 in use: change `ports` mapping in `docker/docker-compose.yml`.
+- ETL fails to connect to DB: ensure `db` is healthy; `docker ps` and `docker logs tourism-db`.
+- CI fails on lint/format: run `ruff` and `black --check` locally and fix issues.
+
